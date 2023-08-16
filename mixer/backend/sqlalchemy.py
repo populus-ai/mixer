@@ -5,6 +5,10 @@ import datetime
 from types import GeneratorType
 
 import decimal
+from geoalchemy2 import Geometry
+from geoalchemy2.shape import from_shape
+from shapely import Point
+from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy import func
 from sqlalchemy.ext.compiler import compiles
 # from sqlalchemy.orm.interfaces import MANYTOONE
@@ -45,6 +49,21 @@ def random_random(element, compiler, **kw):
 def oracle_random(element, compiler, **kw):
     return 'DBMS_RANDOM.VALUE'
 
+
+def get_pointfield(**kwargs):
+    """ Get a Point structure.
+    """
+
+    # return (self.generator.latitude(), self.generator.longitude())
+
+    return from_shape(Point(5, 45), srid=4326)
+    # return dict(type='Point', coordinates=faker.coordinates())
+
+
+def get_empty_array(**kwargs):
+    return []
+
+
 class GenFactory(BaseFactory):
 
     """ Map a sqlalchemy classes to simple types. """
@@ -61,10 +80,18 @@ class GenFactory(BaseFactory):
         (Integer, INTEGER, INT): int,
         (BigInteger, BIGINT): t.BigInteger,
         (SmallInteger, SMALLINT): t.SmallInteger,
+
+        # NOTE: these are postgresql specific types
+        (UUID, UUID): t.UUID,
+        (JSONB, JSONB): t.JSON,
+        # (ARRAY, ARRAY): list,  # TODO: can this be non-psql specific?
+        # (Geometry, Geometry): t.JSON
     }
 
     generators = {
-        Enum: None
+        Enum: None,
+        Geometry: get_pointfield,
+        ARRAY: get_empty_array,
     }
 
 

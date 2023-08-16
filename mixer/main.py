@@ -173,6 +173,15 @@ class TypeMixer(_.with_metaclass(TypeMixerMeta)):
 
         return name, value
 
+    def field_registered(self, field):
+
+        try:
+            return '.register.' in self.get_fabric(field, field.name).__qualname__
+        except AttributeError:
+            pass
+
+        return False
+
     def gen_field(self, field):
         """ Generate value by field.
 
@@ -186,7 +195,7 @@ class TypeMixer(_.with_metaclass(TypeMixerMeta)):
         if default is not SKIP_VALUE:
             return self.get_value(field.name, default)
 
-        if not self.is_required(field):
+        if not self.is_required(field)and not (self.field_registered(field)):
             return field.name, SKIP_VALUE
 
         unique = self.is_unique(field)

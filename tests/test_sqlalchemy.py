@@ -4,6 +4,7 @@ from datetime import datetime
 from random import randrange
 
 import pytest
+from mixer.backend.sqlalchemy import Mixer
 from sqlalchemy import (
     Boolean,
     Column,
@@ -14,7 +15,7 @@ from sqlalchemy import (
     SmallInteger,
     String,
     create_engine,
-    types
+    types, TypeDecorator
 )
 from sqlalchemy.dialects import mssql, mysql, oracle, postgresql, sqlite
 from sqlalchemy.ext.declarative import declarative_base
@@ -233,6 +234,117 @@ def test_postgresql():
     mixer = TypeMixer(Test)
     test = mixer.blend()
     assert test.uuid
+
+
+def test_postgresql_register_nullable():
+    base = declarative_base()
+
+    class Sub(base):
+        __tablename__ = 'sub'
+
+        id = Column(Integer, primary_key=True)
+        val = Column(Integer, nullable=False)
+
+    class Test(base):
+        __tablename__ = 'test'
+
+        id = Column(Integer, primary_key=True)
+        foo = Column(Integer, nullable=True)
+        bar = Column(Integer, nullable=False)
+        baz = Column(Integer, nullable=False)
+        bop = Column(Integer, nullable=True)
+        sub = Column(Integer, ForeignKey('Sub.id'), nullable=True)
+
+    mixer = Mixer()
+
+    sub1 = mixer.blend(Sub, val=8)
+
+    test = mixer.blend(Test,
+                       foo=3,
+                       bar=4,
+                       sub=sub1,
+                       )
+
+    assert test.bar
+    assert test.baz
+    assert test.foo
+    assert test.bop is None
+    assert test.sub.val == 8
+
+    mixer.register(Test,
+                   foo=3,
+                   bar=4,
+                   sub=sub1,
+                   )
+
+    test_registered = mixer.blend(Test)
+    assert test_registered.bar
+    assert test_registered.baz
+    assert test_registered.foo
+    assert test_registered.bop is None
+    assert test_registered.sub.val == 8
+
+
+def test_postgresql_geometry():
+    from mixer.backend.sqlalchemy import TypeMixer, Geometry
+    from sqlalchemy.dialects.postgresql import UUID, JSONB
+
+    base = declarative_base()
+
+    class Test(base):
+        __tablename__ = 'test'
+
+        id = Column(Integer, primary_key=True)
+        geo = Column(Geometry, nullable=False)
+        jsonb = Column(JSONB, nullable=False)
+
+    mixer = TypeMixer(Test)
+    test = mixer.blend()
+    assert test.geo
+
+
+def test_postgresql_type_decorator():
+    from mixer.backend.sqlalchemy import TypeMixer
+    from sqlalchemy.dialects.postgresql import UUID, JSONB
+
+    base = declarative_base()
+
+    class MY_UUID(TypeDecorator):
+        impl = postgresql.UUID
+        cache_ok = True
+
+        def process_literal_param(self, value, dialect):
+            return f"'{value}'"
+
+    class Test(base):
+        __tablename__ = 'test'
+
+        id = Column(Integer, primary_key=True)
+        uuid = Column(MY_UUID, nullable=False)
+        jsonb = Column(JSONB, nullable=False)
+
+    mixer = TypeMixer(Test)
+    test = mixer.blend()
+    assert test.uuid
+
+
+def test_postgresql_array():
+    from mixer.backend.sqlalchemy import TypeMixer
+    from sqlalchemy.dialects.postgresql import ARRAY
+
+    base = declarative_base()
+
+    class Test(base):
+        __tablename__ = 'test'
+
+        id = Column(Integer, primary_key=True)
+        things = Column(ARRAY(Integer), nullable=False)
+        thangs = Column(ARRAY(Integer), nullable=False)
+
+    mixer = TypeMixer(Test)
+    test = mixer.blend(things=[2, '5'])
+    assert test.things == [2, '5']
+    assert test.thangs == []
 
 
 @pytest.mark.parametrize('dialect, expected', [
