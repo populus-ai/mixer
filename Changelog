@@ -1,3 +1,12 @@
+
+2023-08-16
+	* Pinning sqlalchemy below 2.0 since test break
+	* Adding support for postgres UUID, JSONB, ARRAY
+	* Added support for postgis Geometry
+	* Fixing upstream nullable bug: https://github.com/klen/mixer/issues/179
+
+___ Populus branch ___
+
 2022-03-23
 	* Django: Support for UUIDField
 

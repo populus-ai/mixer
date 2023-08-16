@@ -4,6 +4,7 @@
 
 NOTE: Populus Fork
 ==================
+See Changelog for details
 
 
 The **Mixer** is a helper to generate instances of Django or SQLAlchemy models.
